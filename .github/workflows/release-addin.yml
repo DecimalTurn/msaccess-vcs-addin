@@ -1,0 +1,65 @@
+name: Release Add-in
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-2025
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Setup Access runtime
+        uses: DecimalTurn/setup-vba@v0
+        with:
+          office-apps: Access
+          install-office: true
+
+      - name: Build accda from source
+        id: build
+        uses: AccessCodeLib/msaccess-vcs-build@c4bfcb0958016f6523a2c7119ac434116a76e84a # v1.0.1
+        with:
+          source-dir: "./Version Control.accda.src"
+          target-dir: "bin"
+          vcs-url: ""
+        timeout-minutes: 10
+
+      - name: Create versioned ZIP
+        shell: pwsh
+        run: |
+          $zipName = "Version_Control_${{ github.event.release.tag_name }}.zip"
+          Compress-Archive -Path .\bin\* -DestinationPath $zipName
+          echo "ZIP_NAME=$zipName" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Upload ZIP to release
+        uses: softprops/action-gh-release@c062e08bd532815e2082a85e87e3ef29c3e6d191 # v2.0.8
+        with:
+          files: ${{ env.ZIP_NAME }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Calculate SHA256
+        id: hash
+        shell: pwsh
+        run: |
+          $hash = Get-FileHash -Algorithm SHA256 -Path "${{ env.ZIP_NAME }}"
+          $digest = "sha256:$($hash.Hash.ToLower())"
+          echo "ZIP_DIGEST=$digest" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "digest=$digest" >> $env:GITHUB_OUTPUT
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-name: "${{ env.ZIP_NAME }}"
+          subject-digest: "${{ steps.hash.outputs.digest }}"
