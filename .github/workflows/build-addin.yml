@@ -1,0 +1,39 @@
+name: Build Add-in
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-2025
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Access runtime
+        uses: DecimalTurn/setup-vba@v0
+        with:
+          office-apps: Access
+          install-office: true
+
+      - name: Build accda from source
+        id: build
+        uses: AccessCodeLib/msaccess-vcs-build@c4bfcb0958016f6523a2c7119ac434116a76e84a # v1.0.1
+        with:
+          source-dir: "./Version Control.accda.src"
+          target-dir: "bin"
+          vcs-url: "https://api.github.com/repos/josef-poetzl/msaccess-vcs-addin/releases/tags/v4.1.2-build"
+          compile: "true"
+        timeout-minutes: 10
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: Version Control
+          path: "./bin/*"
+          if-no-files-found: error
