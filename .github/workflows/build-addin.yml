@@ -27,8 +27,7 @@ jobs:
         with:
           source-dir: "./Version Control.accda.src"
           target-dir: "bin"
-          vcs-url: "https://api.github.com/repos/josef-poetzl/msaccess-vcs-addin/releases/tags/v4.1.2-build"
-          compile: "true"
+          vcs-url: "https://api.github.com/repos/DecimalTurn/msaccess-vcs-addin/releases/tags/v5.0.1-build.3"
         timeout-minutes: 10
 
       - name: Upload build artifact
