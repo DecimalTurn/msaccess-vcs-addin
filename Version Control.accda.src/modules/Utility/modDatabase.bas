@@ -989,3 +989,68 @@ Public Function LongToSingle(lngVal As Long) As Single
     LSet typSng = typLng
     LongToSingle = typSng.Value
 End Function
+
+Public Sub ExecuteLoggedApplicationRun(ByVal strProcedureName As String, Optional ByVal VcsRef As Object = Nothing)
+
+    Dim ExternalReturnValue As Variant
+    Dim strCmd As String
+    Dim bolUseVcsParam As Boolean
+
+    strCmd = Replace(strProcedureName, ""()"", vbNullString)
+    strCmd = Trim(strCmd)
+
+    If Right(strCmd, 5) = ""(VCS)"" Then
+        bolUseVcsParam = True
+        strCmd = Left(strCmd, Len(strCmd) - 5)
+    End If
+
+    If bolUseVcsParam Then
+        ExternalReturnValue = Application.Run(strCmd, VcsRef)
+    Else
+        ExternalReturnValue = Application.Run(strCmd)
+    End If
+
+    If VarType(ExternalReturnValue) = vbString Then
+        LogErrorMessage ExternalReturnValue, GetProcedureNameFromPath(strProcedureName)
+    ElseIf VarType(ExternalReturnValue) = vbBoolean Then
+        If Not ExternalReturnValue Then
+            Log.Error eelCritical, GetProcedureNameFromPath(strProcedureName) & "" failed (return False)"", ""ExecuteLoggedApplicationRun""
+        End If
+    End If
+
+End Sub
+
+Private Sub LogErrorMessage(ByVal strErrorMessage As String, ByVal strErrorMessageSource As String)
+    Dim lngErrorLevel As eErrorLevel
+    Dim lngErrorLevelEndPos As Long
+
+    lngErrorLevelEndPos = InStr(1, strErrorMessage, "":"")
+    If lngErrorLevelEndPos > 1 Then
+        Select Case Trim(Left(strErrorMessage, lngErrorLevelEndPos - 1))
+            Case ""Error""
+                lngErrorLevel = eelError
+            Case ""Warning"", ""Alert"", ""Failed""
+                lngErrorLevel = eelError
+            Case ""Critical"", ""FATAL""
+                lngErrorLevel = eelCritical
+            Case ""Note"", ""Success"", ""Info""
+                lngErrorLevel = eelWarning
+            Case ""Log""
+                lngErrorLevel = eelWarning
+            Case Else
+                lngErrorLevel = eelError
+                lngErrorLevelEndPos = 0
+        End Select
+        If lngErrorLevelEndPos > 0 Then
+            strErrorMessage = Trim(Mid(strErrorMessage, lngErrorLevelEndPos + 1))
+        End If
+    Else
+        lngErrorLevel = eelError
+    End If
+
+    Log.Error lngErrorLevel, strErrorMessage, strErrorMessageSource
+End Sub
+
+Private Function GetProcedureNameFromPath(ByVal strFullProcedureName As String) As String
+    GetProcedureNameFromPath = Mid(strFullProcedureName, InStrRev(Replace(strFullProcedureName, ""!"", ""\""), ""\"") + 1)
+End Function
