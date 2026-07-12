@@ -133,7 +133,9 @@ Public Sub cmdBuild_Click()
         intBuildType = IIf(chkFullBuild, eotBuild, eotMerge)
         If Operation.Begin(intBuildType) Then
             Operation.Stage
-            SetTimer "Build", strFolder, chkFullBuild
+            ' Bypass Windows API timer for CI compatibility (no message pump in COM automation)
+            Operation.Restore
+            Build strFolder, chkFullBuild
         Else
             ' Not ready to begin a new operation. Probably still running something else.
             DoCmd.Hourglass False
