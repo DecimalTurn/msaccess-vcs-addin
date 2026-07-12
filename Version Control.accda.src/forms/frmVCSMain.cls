@@ -502,6 +502,8 @@ End Sub
 '
 Public Sub Form_Load()
 
+    Static ETO As ErrorTrappingObserver: If ETO Is Nothing Then Set ETO = ErrorTrapping(BreakInClassModule)
+
     ' Capture design and progress-bar baselines for anchored-control calculations.
     m_dblDesignInsideWidth = Me.InsideWidth
     m_dblDesignInsideHeight = Me.InsideHeight
